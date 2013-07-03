@@ -153,6 +153,8 @@ mongo.Shell.prototype.insertResponseLine = function (data, prepend) {
   var lastChar = this.responseBlock.getLine(lastLine).length;
   var lastPos = {line: lastLine, ch: lastChar};
 
+  var isString = typeof(data) === 'string';
+  data = mongo.util.toString(data);
   if (prepend) {
     data = prepend + data;
   }
@@ -162,7 +164,7 @@ mongo.Shell.prototype.insertResponseLine = function (data, prepend) {
   this.responseBlock.replaceRange(separator + data, lastPos);
 //  this.responseBlock.setValue(this.responseBlock.getValue() + separator + data);
 
-  if (typeof(data) === 'string' && !prepend) {
+  if (isString && !prepend) {
     var newLastLine = this.responseBlock.lineCount() - 1;
     this.responseBlock.addLineClass(newLastLine, 'text', 'mws-cm-plain-text');
   }

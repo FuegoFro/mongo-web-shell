@@ -242,9 +242,9 @@ def db_collection_count(res_id, collection_name):
     parse_get_json(request)
     query = request.json.get('query')
 
-    internal_coll_name = get_internal_coll_name(res_id, collection_name)
-    count = db.get_db()[internal_coll_name].find(query).count()
-    return to_json({'count': count})
+    with UseResId(res_id):
+        count = get_db()[collection_name].find(query).count()
+        return to_json({'count': count})
 
 
 @mws.route('/<res_id>/db/getCollectionNames',

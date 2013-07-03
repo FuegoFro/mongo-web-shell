@@ -22,6 +22,9 @@ mongo.Readline.prototype.keydown = function (event) {
     line = this.getNewerHistoryEntry();
     break;
   case key.enter:
+    if (event.shiftKey) {
+      return; // Shift+Enter should insert a newline
+    }
     this.submit(this.inputBox.getValue());
     break;
   default:
