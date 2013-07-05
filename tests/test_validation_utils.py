@@ -1,5 +1,4 @@
 from mongows.mws.db import get_db
-from mongows.mws.util import UseResId
 from tests import MongoWSTestCase
 from mongows.validators.ValidationTest import ValidationTest
 
@@ -7,7 +6,7 @@ from mongows.validators.ValidationTest import ValidationTest
 class ValidationUtilsTestCase(MongoWSTestCase):
     def setUp(self):
         class ValidationTestCase(ValidationTest):
-            def run():
+            def run(self):
                 pass
 
         self.db = get_db()

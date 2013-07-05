@@ -1,20 +1,10 @@
-import os
-from mongows.initializers.util import (
-    load_data_from_mongodump,
-)
+from mongows.initializers.util import load_data_from_mongodump
+from mongows.validators.ValidationTest import get_file_in_dir
 
 
 def run(res_id):
-    base_path = os.path.join(
-        os.getcwd(),
-        'mongows',
-        'initializers',
-        'scripts',
-        'M101J',
-        'Final_Exam'
-    )
-    path = os.path.join(base_path, 'albums.bson')
+    path = get_file_in_dir(__file__, 'albums.bson')
     load_data_from_mongodump(res_id, path, 'albums',)
 
-    path = os.path.join(base_path, 'images_init.bson')
+    path = get_file_in_dir(__file__, 'images_init.bson')
     load_data_from_mongodump(res_id, path, 'images',)

@@ -9,22 +9,86 @@
 </head>
 <body>
   <div class="content-wrapper">
-    <h1>Welcome to the mongoDB web shell!</h1>
-    <p>
-      The mongoDB web shell simulates interaction with a mongo shell for
-      use as a learning aid and a promotional tool. Go ahead and try some
-      commands out! Check
-      <a href="http://docs.mongodb.org/manual/reference/mongo-shell/">
-      this</a>
-      page for detailed information on commands to try.
-    </p>
-    <div class="mongo-web-shell" data-initialization-url="/init/M101J.Final_Exam.7">
-      <p>connecting to random database</p>
-      <p>type "help" for help</p>
+    <h1>M101J: Final Exam - Problem 7</h1>
+    <div>
+      You have been tasked to cleanup a photosharing database. The database
+      consists of two collections, albums, and images. Every image is supposed
+      to be in an album, but there are orphan images that appear in no album.
+
+      Here are some example documents (not from the collections you will be
+      downloading).
+      <br>
+<pre class='example-interaction'>&gt; db.albums.findOne()
+{
+	"_id" : 67
+	"images" : [
+		4745,
+		7651,
+		15247,
+		17517,
+		17853,
+		20529,
+		22640,
+		27299,
+		27997,
+		32930,
+		35591,
+		48969,
+		52901,
+		57320,
+		96342,
+		99705
+	]
+}
+
+&gt; db.images.findOne()
+{ "_id" : 99705, "height" : 480, "width" : 640 }
+&gt;
+</pre>
+      From the above, you can conclude that the image with _id = 99705 is in
+      album 67. It is not an orphan.
+      <br><br>
+      Your task is to write a program to remove every image from the images
+      collection that appears in no album. Or put another way, if an image does
+      not appear in at least one album, it's an orphan and should be removed
+      from the images collection. When you are done removing the orphan images
+      from the collection, you can check that your solution is correct by
+      clicking the 'verify' button below the embedded shell. As a sanity check,
+      there should be 90,017 documents in the images collection when you've
+      finished.
     </div>
+    <br/>
+    <div class="mongo-web-shell" data-initialization-url="/init/M101J.Final_Exam.7" ></div>
+    <br/>
+    <div id='verify' class='button'>Verify</div>
+    <div id='verify-result'></div>
   </div>
 
   <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
   <script src="/dist/mongoWebShell.js" data-css-path="/dist/mongoWebShell.css"></script>
+  <script type='text/javascript'>
+    $(document).ready(function () {
+      $('#verify').click(function () {
+        $('#verify-result').html('Verifying...  ').css({color: ''});
+        $.post(
+          '/validate/M101J.Final_Exam.7',
+          {res_id: mongo.shells[0].mwsResourceID},
+          function (data) {
+            var message, color;
+            if (data === 'pass') {
+              message = 'You are correct!';
+              color = 'rgb(18, 134, 18)';
+            } else {
+              message = 'Try again.';
+              color = 'rgb(184, 31, 31)';
+            }
+            $('#verify-result').html(message).css({color: color});
+          }
+        ).fail(function () {
+          $('#verify-result').html('Oops, we failed to verify your answer, please try again.');
+        });
+      })
+    });
+  </script>
 </body>
 </html>

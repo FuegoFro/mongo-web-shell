@@ -1,6 +1,7 @@
 import types
 import mock
 import sys
+from mongows.validators import ValidationTest
 from tests import MongoWSTestCase
 
 
@@ -10,7 +11,7 @@ class ValidatorsTestCase(MongoWSTestCase):
         test_script = types.ModuleType('test_script')
         run_mock = mock.MagicMock()
 
-        class ValidationTestCase:
+        class ValidationTestCase(ValidationTest):
             def __init__(self, res_id):
                 self.res_id = res_id
 

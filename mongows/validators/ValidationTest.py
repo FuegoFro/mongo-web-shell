@@ -1,11 +1,9 @@
+import os
 from mongows.mws.db import get_db
 from mongows.mws.util import UseResId
-from abc import ABCMeta, abstractmethod
 
 
 class ValidationTest:
-    __metaclass__ = ABCMeta
-
     def __init__(self, res_id):
         self.res_id = res_id
         self.db = get_db()
@@ -13,7 +11,7 @@ class ValidationTest:
     # Collection must exactly equal the data set
     def collection_equals(self, collection, data):
         with UseResId(self.res_id):
-            result = list(self.db[collection].find({}, {'_id': 0}))
+            result = list(self.db[collection].find())
             return sorted(result) == sorted(data)
 
     # Data must be a subset of collection
@@ -32,7 +30,7 @@ class ValidationTest:
     def collection_contains_none(self, collection, data):
         return not self.collection_contains_any(collection, data)
 
-    # Require all inheriting classes to implement a run method
-    @abstractmethod
-    def run():
-        pass
+
+def get_file_in_dir(module_file, file_name):
+    script_path = os.path.realpath(module_file)
+    return os.path.join(os.path.dirname(script_path), file_name)
