@@ -37,7 +37,7 @@
         var query = args.length ? ' that match ' + wrapInCodeBlock(JSON.stringify(args[0])) : '';
         var projection = args.length < 2 ? '' : ' the fields ' + wrapInCodeBlock(JSON.stringify(args[1])) + ' in';
 
-        $('#prompt').html('Good! You looked for' + projection +' all files' + query + ' in collection ' + wrapInCodeBlock(data.collection) + '.')
+        $('#prompt').html('Good! You looked for' + projection +' all files' + query + ' in collection ' + wrapInCodeBlock(data.collection) + '.');
         $('<div />').prop('id', 'additional').appendTo('#prompt');
       };
 
@@ -82,12 +82,12 @@
         return mongo.events.bindOnce(shell, 'db:collection:remove', function(e, data){
           var args = $.makeArray(data.arguments);
           var removeString = args.length === 0 ? '' : ' that match ' + wrapInCodeBlock(JSON.stringify(args[0]));
-          $('#prompt').html('Great job. You removed all files' + removeString + ' from collection ' + wrapInCodeBlock(data.collection) + '<br />' +
-                            'Finally, remove the collection itself with db.' + targetCollection + '.drop()');
+          $('#prompt').html('Perfect! You removed all files' + removeString + ' from collection ' + wrapInCodeBlock(data.collection) + '.<br />' +
+                            'Finally, we can get rid of any trace we were here by removing the collection itself with ' + wrapInCodeBlock('db.' + targetCollection + '.drop()'));
         }, null, function(s, e, d){ return d.collection === targetCollection });
       }).then(function(){
         return mongo.events.bindOnce(shell, 'db:collection:drop', function(e, data){
-          $('#prompt').html('Awesome! You removed collection ' + wrapInCodeBlock(data.collection) + '.' + '<br />' +
+          $('#prompt').html('Excellent, the ' + wrapInCodeBlock(data.collection) + ' collection is gone.' + '<br />' +
           'Congratulations, you\'ve mastered the basics! Welcome to the MongoDB Community.');
         }, null, function(s, e, d){ return d.collection === targetCollection });
       });
