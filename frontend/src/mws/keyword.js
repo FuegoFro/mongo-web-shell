@@ -78,14 +78,21 @@ mongo.keyword = (function () {
     mongo.keyword._resetHasBeenCalled = false;
     var url = mongo.config.baseUrl + shell.mwsResourceID + '/db';
     mongo.request.makeRequest(url, null, 'DELETE', 'reset', shell, function(){
-      delete mongo.init._initState[shell.mwsResourceID];
-
       // TODO: use appropriate res_ids when multiple res_ids are enabled
-      $.each(mongo.shells, function(i, e){
-        mongo.init._initShell(e.$rootElement, mongo.init.res_id,
-                              {createNew: false, initData: true});
+      var usedIds = {};
+      var resourceIds = [];
+      $.each(mongo.shells, function (i, shell) {
+        var res_id = shell.mwsResourceId;
+        if (!(res_id in usedIds)) {
+          usedIds[res_id] = 1;
+          resourceIds.push(res_id);
+        }
+      });
+      $.each(resourceIds, function(i, res_id){
+        mongo.init.prepopulateData(res_id);
       });
 
+      // Todo: This message will show up way too early.
       shell.insertResponseLine('Database reset successfully');
     });
   }

@@ -49,28 +49,28 @@ mongo.init = (function(){
   };
 
   var loadJSONUrl = function(url, res_id){
-    // Try pulling from the cache first
-    var data = mongo.init._jsonCache[url];
-    if (data){
-      return mongo.init._loadJSON(data, res_id);
-    }
-
     return $.getJSON(url).then(function(data){
-      mongo.init._jsonCache[url] = data;
-      return mongo.init._loadJSON(data, res_id);
+      // Condense remote and local JSON
+      condenseJson(mongo.init._initState[res_id].initJson, data);
+    });
+  };
+
+  var condenseJson = function (existingJson, newJson) {
+    // Modifies the existing JSON to include the new JSON. The JSON format is
+    // {collection_name: [document, document,...], ...}
+    $.each(newJson, function (collection, documents) {
+      if (!(collection in existingJson)) {
+        existingJson[collection] = [];
+      }
+      $.merge(existingJson[collection], documents);
     });
   };
 
   var lockShells = function(res_id){
-    if (!mongo.init._initState[res_id]){
-      mongo.init._initState[res_id] = {
-        pending: 1,
-        initUrls: [],
-        initJsonUrls: []
-      };
-    } else {
-      mongo.init._initState[res_id].pending++;
+    if (mongo.init._pending[res_id] === undefined) {
+      mongo.init._pending[res_id] = 0;
     }
+    mongo.init._pending[res_id]++;
 
     // Lock all affected shells with same res_id
     // Note that this is currently ALL shells since we do not yet assign
@@ -84,16 +84,17 @@ mongo.init = (function(){
   // can optionally wait for one or more deferred objects to resolve
   // see note above regarding all shells having same res_id
   var unlockShells = function(res_id, waitFor){
-    $.when.apply($, waitFor).then(function(){
-      mongo.init._initState[res_id].pending--;
-      if (!mongo.init._initState[res_id].pending){
+    var pending = mongo.init._pending;
+    return $.when.apply($, waitFor).then(function(){
+      pending[res_id]--;
+      if (!pending[res_id]){
         $.each(mongo.shells, function(i, e){
           e.enableInput(true);
         });
       }
     }, function(){
-      mongo.init._initState[res_id].pending--;
-      if (!mongo.init._initState[res_id].pending){
+      pending[res_id]--;
+      if (!pending[res_id]){
         $.each(mongo.shells, function(i, e){
           e.insertResponseArray([
             'One or more scripts failed during initialization.',
@@ -105,47 +106,87 @@ mongo.init = (function(){
     });
   };
 
-  var initShell = function(shellElement, res_id, options){
-    var createNew = options.createNew, initData = options.initData;
-    var waitFor = [];
+  var initShell = function(shellElement, options){
+    options = options || {};
 
-    if (createNew && $(shellElement).data('shell') === undefined){
+    var $element = $(shellElement);
+    if ($element.data('shell') !== undefined) {
+      // We have already put a shell in this container, do not re-initialize
+      return;
+    }
+
+    // Request a resource ID, give it to all the shells, and keep it alive
+    mongo.request.createMWSResource(mongo.shells, function (data) {
+      var res_id = mongo.init.res_id = data.res_id;
+      setInterval(
+        function () { mongo.request.keepAlive(data.res_id); },
+        mongo.const.keepAliveTime
+      );
+
       var shell = new mongo.Shell(shellElement, mongo.shells.length);
       shell.attachInputHandler(res_id);
       mongo.shells.push(shell);
-    }
 
-    if (initData){
-      // lock shells for init
-      lockShells(res_id);
+      if (!mongo.init._initState[res_id]) {
+        mongo.init._initState[res_id] = {
+          initUrls: [],
+          initJson: {},
+          initJsonUrls: [],
+          shouldInitialize: false
+        };
+      }
+      var initData = mongo.init._initState[res_id];
 
-      // Load init urls
-      var initUrl = options.initUrl || $(shellElement).data('initialization-url');
-      if (initUrl && mongo.init._initState[res_id].initUrls.indexOf(initUrl) === -1) {
-        mongo.init._initState[res_id].initUrls.push(initUrl);
-        waitFor.push(loadUrl(initUrl, res_id));
+      // Save init urls
+      var initUrl = options.initUrl || $element.data('initialization-url');
+      if (initUrl && initData.initUrls.indexOf(initUrl) === -1) {
+        initData.initUrls.push(initUrl);
       }
 
-      // Load init JSON/urls
-      var jsonAttr = options.initJSON || $(shellElement).data('initialization-json');
+      // Save init JSON/urls
+      var jsonAttr = options.initJSON || $element.data('initialization-json');
       if (typeof jsonAttr === 'object'){
-        waitFor.push(loadJSON(jsonAttr, res_id));
+        condenseJson(initData.initJson, jsonAttr);
       } else if (jsonAttr && jsonAttr[0] === '{' && jsonAttr[jsonAttr.length - 1] === '}') {
         // If it looks like a JSON object, assume it is supposed to be and try to parse it
         try {
-          waitFor.push(loadJSON(JSON.parse(jsonAttr), res_id));
+          condenseJson(initData.initJson, JSON.parse(jsonAttr));
         } catch (e) {
           console.error('Unable to parse initialization json: ' + jsonAttr);
         }
-      } else if (jsonAttr &&
-                 mongo.init._initState[res_id].initJsonUrls.indexOf(jsonAttr) === -1) {
+      } else if (jsonAttr && initData.initJsonUrls.indexOf(jsonAttr) === -1) {
         // Otherwise assume it's a URL that points to JSON data
-        mongo.init._initState[res_id].initJsonUrls.push(jsonAttr);
-        waitFor.push(loadJSONUrl(jsonAttr, res_id));
+        initData.initJsonUrls.push(jsonAttr);
       }
 
+      // If the resource id is new, then we want to run our initializations
+      initData.shouldInitialize = initData.shouldInitialize || data.is_new;
+    });
+  };
+
+  var prepopulateData = function (res_id) {
+    // lock shells for init
+    lockShells(res_id);
+
+    // First request all remote JSON
+    var initData = mongo.init._initState[res_id];
+    var remoteJsonRequests = $.map(initData.initJsonUrls, function (url) {
+      return loadJSONUrl(url, res_id);
+    });
+
+    unlockShells(res_id, remoteJsonRequests).then(function () {
+      // Successfully got remote JSON
+      initData.initJsonUrls = [];
+
+      lockShells(res_id);
+
+      var waitFor = $.map(initData.initUrls, function (url) {
+        return loadUrl(url, res_id);
+      });
+      waitFor.push(loadJSON(initData.initJson, res_id));
+
       unlockShells(res_id, waitFor);
-    }
+    });
   };
 
   var run = function () {
@@ -154,28 +195,18 @@ mongo.init = (function(){
     var config = mongo.config = mongo.dom.retrieveConfig();
     mongo.dom.injectStylesheet(config.cssPath);
 
-
-    // Request a resource ID, give it to all the shells, and keep it alive
-    mongo.request.createMWSResource(mongo.shells, function (data) {
-      mongo.init.res_id = data.res_id;
-
-      setInterval(
-        function () { mongo.request.keepAlive(data.res_id); },
-        mongo.const.keepAliveTime
-      );
-
-      // For now, assume a single resource id for all shells
-      // Initialize all shells and process initialization urls
-      $(mongo.const.rootElementSelector).mws({createNew: true, initData: data.is_new});
-    });
+    $(mongo.const.rootElementSelector).mws();
   };
 
   return {
     run: run,
+    prepopulateData: prepopulateData,
     _initState: {},
+    _pending: {},
     _lockShells: lockShells,
     _unlockShells: unlockShells,
     _initShell: initShell,
+    _loadUrl: loadUrl,
     _loadJSON: loadJSON,
     _loadJSONUrl: loadJSONUrl,
     _jsonCache: {},

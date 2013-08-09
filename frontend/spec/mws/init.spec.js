@@ -106,7 +106,7 @@ describe('The init function', function () {
       spyOn(mongo, 'Shell').andCallThrough();
 
       // reattach the prototype chain for call through methods
-      mongo.Shell.prototype.constructor.prototype = proto;
+      mongo.Shell.prototype = proto;
 
       spyOn(window, 'setInterval');
       mongo.Shell.enableInput = jasmine.createSpy();
@@ -115,7 +115,7 @@ describe('The init function', function () {
 
       mongo.init.run();
       expect(mongo.Shell.callCount).toBe(SHELL_COUNT);
-      mongo.init._initShell(shellElements[0], dataObj.res_id, {createNew: true, initData: true});
+      mongo.init._initShell(shellElements[0]);
       expect(mongo.Shell.callCount).toBe(SHELL_COUNT);
     });
 

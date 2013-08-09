@@ -41,15 +41,12 @@ mongo.jQueryInit = function($){
 
         case 'loadUrl':
           // loads data from url into first selected shell
-          mongo.init._initShell(this[0], mongo.init.res_id, {
-            createNew: false,
-            initData: true,
-            initUrl: arguments[1]
-          });
+          mongo.init._loadUrl(arguments[1], mongo.init.res_id);
           break;
 
         case 'loadJSON':
-          // loads data from json into first selected shell
+          // loads data from literal json into first selected shell
+//          monog.init._loadJson()
           mongo.init._initShell(this[0], mongo.init.res_id, {
             createNew: false,
             initData: true,
@@ -96,7 +93,7 @@ mongo.jQueryInit = function($){
             opt.initJSON = $(e).data('initialization-json');
           }
 
-          mongo.init._initShell(e, mongo.init.res_id, opt);
+          mongo.init._initShell(e, opt);
         });
 
         if (options.height){ this.height(options.height); }
@@ -112,8 +109,6 @@ mongo.jQueryInit = function($){
 
   $.mws = {
     defaults: {
-      createNew: true,
-      initData: true,
       initUrl: undefined,
       initJSON: undefined,
       height: undefined,
